@@ -31,10 +31,13 @@ int flag = 0, flag2 = 0, flag3 = 0;
 int posicao = 0;
 int botCont = 0;
 int tentativas = 0;
+int aux;
 char key;
 char senha[TAM_SENHA] = "1234";
 char senha2[TAM_SENHA] = "5678";
 char senha3[TAM_SENHA] = "ABCD";
+char senhaLista[MAX_SENHAS][TAM_SENHA] = {{"5678"},{"ABCD"}};
+char senhaMomento[TAM_SENHA] = {0};
 char senhaIns[TAM_SENHA] = {0};
 
 void VerificaSenha(void){
@@ -104,6 +107,20 @@ void VerificaSenha(void){
 }
 
 void VerificaSenha2(void){
+  if(flag3 == 0){
+    flag3 = 1;
+    aux = random(0,2);
+    
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Senha ");
+    aux++;
+    lcd.print(aux);
+    aux--;
+    
+    strcpy(senhaMomento, senhaLista[aux]);
+  }
+  
   key = keypad.getKey();
     
   if(key){
@@ -124,88 +141,19 @@ void VerificaSenha2(void){
 
         if(posicao == TAM_SENHA - 2){
 
-          if(strcmp(senhaIns, senha2) == 0){
+          if(strcmp(senhaIns, senhaMomento) == 0){
             lcd.clear();
             lcd.setCursor(0,0);
-            lcd.print("NEXT");
+            lcd.print("OPEN");
             tone(buzz, 500, 700);
 
-            flag2 = 2;
+            digitalWrite(relePin, HIGH);
             posicao = 0;
 
           }else{
             lcd.clear();
             lcd.setCursor(0,0);
             lcd.print("WRONG2");
-            tone(buzz, 1000, 700);
-            tentativas++;
-            posicao = 0;
-          }
-
-          if(tentativas == 3){
-            lcd.clear();
-            lcd.setCursor(0,0);
-            lcd.print("BLOCKED");
-            tone(buzz, 2000, 10000);
-
-            while(1){
-              botState = digitalRead(botao2);
-
-              if(botState && botCont != 2){
-                botCont++;
-                tentativas = 0;
-                lcd.clear();
-                lcd.setCursor(0,0);
-                lcd.print("RESTARTED");
-                noTone(buzz);
-                break;
-              }
-            }
-          }
-
-         break;
-        }
-      }
-    }
-  }
-}
-
-void VerificaSenha3(void){
-  key = keypad.getKey();
-    
-  if(key){
-    senhaIns[posicao] = key;
-      
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print(key);
-    
-    while(1){
-      key = keypad.getKey();
-
-      if(key){
-        posicao++;
-        senhaIns[posicao] = key;
-
-        lcd.print(key);
-
-        if(posicao == TAM_SENHA - 2){
-
-          if(strcmp(senhaIns, senha3) == 0){
-            lcd.clear();
-            lcd.setCursor(0,0);
-            lcd.print("OPEN");
-            tone(buzz, 500, 700);
-            
-			digitalWrite(relePin, HIGH);
-            delay(2000);
-            digitalWrite(relePin, LOW);
-            posicao = 0;
-
-          }else{
-            lcd.clear();
-            lcd.setCursor(0,0);
-            lcd.print("WRONG3");
             tone(buzz, 1000, 700);
             tentativas++;
             posicao = 0;
@@ -273,10 +221,6 @@ void loop(){
   
   if(flag2 == 1){
     VerificaSenha2();
-  }
-  
-  if(flag2 == 2){
-    VerificaSenha3();
   }
   
   delay(10);
