@@ -1,4 +1,3 @@
-#include <Servo.h>
 #include <LiquidCrystal.h>
 #include <Keypad.h>
 #include <string.h>
@@ -28,12 +27,10 @@ Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 int botState = 0;
 int flag = 0, flag2 = 0, flag3 = 0;
 int posicao = 0;
-int botCont = 0;
 int tentativas = 0;
 int aux;
 char key;
 char senha[TAM_SENHA] = "1234";
-char senhaAlarme[TAM_SENHA] = "1A2B";
 char senhaLista[MAX_SENHAS][TAM_SENHA] = {{"5678"},
 										  {"ABCD"},
 										  {"DCBA"}, 
@@ -41,6 +38,40 @@ char senhaLista[MAX_SENHAS][TAM_SENHA] = {{"5678"},
                                          };
 char senhaMomento[TAM_SENHA] = {0};
 char senhaIns[TAM_SENHA] = {0};
+
+void SenhaErrada(void){
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("WRONG");
+  tone(buzz, 1000, 700);
+  tentativas++;
+  posicao = 0;
+}
+
+void Alarme(void){
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("BLOCKED");
+  tone(buzz, 2000, 10000);
+  delay(10000);
+  
+  lcd.clear();
+  lcd.setCursor(0,0);
+  posicao = 0;
+  tentativas = 0;
+  flag = 0;
+}
+
+void ReiniciaSistema(void){
+  lcd.clear();
+  lcd.setCursor(0,0);
+  digitalWrite(relePin, LOW);
+  
+  posicao = 0;
+  tentativas = 0;
+  flag = flag2 = flag3 = 0;
+  
+}
 
 void VerificaSenha(void){
   key = keypad.getKey();
@@ -73,25 +104,11 @@ void VerificaSenha(void){
           lcd.setCursor(0,0);
 
         }else{
-          lcd.clear();
-          lcd.setCursor(0,0);
-          lcd.print("WRONG");
-          tone(buzz, 1000, 700);
-          tentativas++;
-          posicao = 0;
+          SenhaErrada();
         }
 
         if(tentativas == 3){
-          lcd.clear();
-          lcd.setCursor(0,0);
-          lcd.print("BLOCKED");
-          tone(buzz, 2000, 10000);
-          delay(10000);
-          lcd.clear();
-          lcd.setCursor(0,0);
-          posicao = 0;
-          tentativas = 0;
-          flag = 0;
+		  Alarme();
         }
 
         break;
@@ -104,7 +121,6 @@ void VerificaSenha2(void){
   if(flag3 == 0){
     flag3 = 1;
     aux = random(0,4);
-    Serial.println(aux);
     
     lcd.clear();
     lcd.setCursor(0,0);
@@ -140,41 +156,20 @@ void VerificaSenha2(void){
             lcd.clear();
             lcd.setCursor(0,0);
             lcd.print("OPEN");
-            tone(buzz, 500, 700);
-
             digitalWrite(relePin, HIGH);
-            posicao = 0;
+            tone(buzz, 500, 700);
+            
+            delay(2000);
+            ReiniciaSistema();
 
           }else{
-            lcd.clear();
-            lcd.setCursor(0,0);
-            lcd.print("WRONG2");
-            tone(buzz, 1000, 700);
-            tentativas++;
-            posicao = 0;
+            SenhaErrada();
           }
 
           if(tentativas == 3){
-            lcd.clear();
-            lcd.setCursor(0,0);
-            lcd.print("BLOCKED");
-            tone(buzz, 2000, 10000);
-
-            while(1){
-              botState = digitalRead(botao);
-
-              if(botState && botCont != 2){
-                botCont++;
-                tentativas = 0;
-                lcd.clear();
-                lcd.setCursor(0,0);
-                lcd.print("RESTARTED");
-                noTone(buzz);
-                break;
-              }
-            }
+            Alarme();
           }
-
+          
          break;
         }
       }
@@ -183,7 +178,6 @@ void VerificaSenha2(void){
 }
 
 void setup(){
-  Serial.begin(9600);
   lcd.begin(16,2);
   pinMode(relePin, OUTPUT);
   pinMode(botao, INPUT);
