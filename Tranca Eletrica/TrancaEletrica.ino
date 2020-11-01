@@ -21,21 +21,33 @@ byte colPins[COLS] = {5,4,3,2};
 
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
-#define TAM_SENHA 5
-#define MAX_SENHAS 4
+#define TAM_SENHA 6
+#define MAX_SENHAS 3
 
 int botState = 0;
-int flag = 0, flag2 = 0, flag3 = 0;
+int flag = 0, flag2 = 0, flag3 = 0, flag4 = 0;
 int posicao = 0;
 int tentativas = 0;
 int aux;
+char usuario;
 char key;
-char senha[TAM_SENHA] = "1234";
-char senhaLista[MAX_SENHAS][TAM_SENHA] = {{"5678"},
-										  {"ABCD"},
-										  {"DCBA"}, 
-										  {"8765"}
-                                         };
+char senha[TAM_SENHA] = "1234*";
+char senhaA[MAX_SENHAS][TAM_SENHA] = {{"5678*"},
+									  {"ABCD*"},
+									  {"DCBA*"} 
+                                     };
+char senhaB[MAX_SENHAS][TAM_SENHA] = {{"1234*"},
+									  {"4321*"},
+								      {"1A2B*"}
+                                     };
+char senhaC[MAX_SENHAS][TAM_SENHA] = {{"5678*"},
+									  {"ABCD*"},
+									  {"DCBA*"} 
+                                     };
+char senhaD[MAX_SENHAS][TAM_SENHA] = {{"1234*"},
+									  {"4321*"},
+								      {"1A2B*"}
+                                     };
 char senhaMomento[TAM_SENHA] = {0};
 char senhaIns[TAM_SENHA] = {0};
 
@@ -69,7 +81,7 @@ void ReiniciaSistema(void){
   
   posicao = 0;
   tentativas = 0;
-  flag = flag2 = flag3 = 0;
+  flag = flag2 = flag3 = flag4 = 0;
   
 }
 
@@ -120,16 +132,34 @@ void VerificaSenha(void){
 void VerificaSenha2(void){
   if(flag3 == 0){
     flag3 = 1;
-    aux = random(0,4);
+    aux = random(0,MAX_SENHAS);
     
-    lcd.clear();
-    lcd.setCursor(0,0);
+    lcd.setCursor(0,1);
     lcd.print("Senha ");
     aux++;
     lcd.print(aux);
     aux--;
     
-    strcpy(senhaMomento, senhaLista[aux]);
+    switch(usuario){
+      case 'A':
+        strcpy(senhaMomento, senhaA[aux]);
+        break;
+      case 'B':
+        strcpy(senhaMomento, senhaB[aux]);
+        break;
+      case 'C':
+        strcpy(senhaMomento, senhaC[aux]);
+        break;
+      case 'D':
+        strcpy(senhaMomento, senhaD[aux]);
+        break;
+      default:
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("ERROR");
+        delay(2000);
+        ReiniciaSistema();
+    }
   }
   
   key = keypad.getKey();
@@ -202,6 +232,8 @@ void loop(){
     lcd.setCursor(0,0);
     lcd.print("OPEN");
     tone(buzz, 900, 700);
+    delay(2000);
+    ReiniciaSistema();
   }
   
   if(flag2 == 0){
@@ -209,6 +241,23 @@ void loop(){
   }
   
   if(flag2 == 1){
+    if(flag4 == 0){
+      
+      while(1){
+	    usuario = keypad.getKey();
+    
+        if(usuario){
+          flag4 = 1;
+          lcd.clear();
+          lcd.setCursor(0,0);
+          lcd.print("Usuario: ");
+          lcd.print(usuario);
+          
+          break;
+        }
+      }
+    }
+    
     VerificaSenha2();
   }
   
