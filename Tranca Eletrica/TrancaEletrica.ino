@@ -6,9 +6,8 @@
 #define relePin 12
 #define botao 10
 #define buzz 11
-#define botao2 13
 
-LiquidCrystal lcd(14,15,16,17,18,19);
+LiquidCrystal lcd(13,15,16,17,18,19);
 
 const byte ROWS = 4; 
 const byte COLS = 4; 
@@ -24,7 +23,7 @@ byte colPins[COLS] = {5,4,3,2};
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 #define TAM_SENHA 5
-#define MAX_SENHAS 2
+#define MAX_SENHAS 4
 
 int botState = 0;
 int flag = 0, flag2 = 0, flag3 = 0;
@@ -34,9 +33,12 @@ int tentativas = 0;
 int aux;
 char key;
 char senha[TAM_SENHA] = "1234";
-char senha2[TAM_SENHA] = "5678";
-char senha3[TAM_SENHA] = "ABCD";
-char senhaLista[MAX_SENHAS][TAM_SENHA] = {{"5678"},{"ABCD"}};
+char senhaAlarme[TAM_SENHA] = "1A2B";
+char senhaLista[MAX_SENHAS][TAM_SENHA] = {{"5678"},
+										  {"ABCD"},
+										  {"DCBA"}, 
+										  {"8765"}
+                                         };
 char senhaMomento[TAM_SENHA] = {0};
 char senhaIns[TAM_SENHA] = {0};
 
@@ -84,20 +86,12 @@ void VerificaSenha(void){
           lcd.setCursor(0,0);
           lcd.print("BLOCKED");
           tone(buzz, 2000, 10000);
-
-          while(1){
-            botState = digitalRead(botao2);
-
-            if(botState && botCont != 2){
-              botCont++;
-              tentativas = 0;
-              lcd.clear();
-              lcd.setCursor(0,0);
-              lcd.print("RESTARTED");
-              noTone(buzz);
-              break;
-            }
-          }
+          delay(10000);
+          lcd.clear();
+          lcd.setCursor(0,0);
+          posicao = 0;
+          tentativas = 0;
+          flag = 0;
         }
 
         break;
@@ -109,7 +103,8 @@ void VerificaSenha(void){
 void VerificaSenha2(void){
   if(flag3 == 0){
     flag3 = 1;
-    aux = random(0,2);
+    aux = random(0,4);
+    Serial.println(aux);
     
     lcd.clear();
     lcd.setCursor(0,0);
@@ -166,7 +161,7 @@ void VerificaSenha2(void){
             tone(buzz, 2000, 10000);
 
             while(1){
-              botState = digitalRead(botao2);
+              botState = digitalRead(botao);
 
               if(botState && botCont != 2){
                 botCont++;
@@ -192,9 +187,9 @@ void setup(){
   lcd.begin(16,2);
   pinMode(relePin, OUTPUT);
   pinMode(botao, INPUT);
-  pinMode(botao2, INPUT);
   pinMode(buzz, OUTPUT);
   
+  randomSeed(analogRead(A0));
   digitalWrite(relePin, LOW);
 }
   
@@ -211,7 +206,7 @@ void loop(){
     digitalWrite(relePin, HIGH);
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.print("CLOSED");
+    lcd.print("OPEN");
     tone(buzz, 900, 700);
   }
   
