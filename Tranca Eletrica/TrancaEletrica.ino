@@ -1,3 +1,4 @@
+#include <EEPROM.h>
 #include <LiquidCrystal.h>
 #include <Keypad.h>
 #include <string.h>
@@ -23,15 +24,17 @@ Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 #define TAM_SENHA 6
 #define MAX_SENHAS 3
+#define INICIO_SENHA_MESTRA 100
 
 int botState = 0;
-int flag = 0, flag2 = 0, flag3 = 0, flag4 = 0;
+int flag = 0, flag2 = 0, flag3 = 0, flag4 = 0; 
+int flagConfig = 0, flagMem;
 int posicao = 0;
 int tentativas = 0;
 int aux;
+int cont, cont2, cont3;
 char usuario;
 char key;
-char senha[TAM_SENHA] = "1234*";
 char senhaA[MAX_SENHAS][TAM_SENHA] = {{"5678*"},
 									  {"ABCD*"},
 									  {"DCBA*"} 
@@ -50,6 +53,44 @@ char senhaD[MAX_SENHAS][TAM_SENHA] = {{"1234*"},
                                      };
 char senhaMomento[TAM_SENHA] = {0};
 char senhaIns[TAM_SENHA] = {0};
+
+void ConfiguracaoSenhaMestra(void){
+  if(flagConfig == 0){
+    lcd.clear();
+    lcd.print("Insira a senha");
+    lcd.setCursor(0,1);
+    lcd.print("mestra");
+    
+    flagConfig = 1;
+    cont = INICIO_SENHA_MESTRA;
+  }
+  
+  key = keypad.getKey();
+    
+  if(key){
+    lcd.clear();
+    lcd.print(key);
+    EEPROM.write(cont, key);
+    cont++;
+      
+    while(1){
+      key = keypad.getKey();
+      
+      if(key == '*'){
+        EEPROM.write(cont, key);
+        EEPROM.put(0, 1);
+    	EEPROM.get(0, flagMem);
+        break;
+      }
+      
+      if(key){
+        lcd.print(key);
+        EEPROM.write(cont, key);
+        cont++;      
+      }
+    }
+  }
+}
 
 void SenhaErrada(void){
   lcd.clear();
@@ -86,6 +127,7 @@ void ReiniciaSistema(void){
 }
 
 void VerificaSenha(void){
+  
   key = keypad.getKey();
 
   if(key){
@@ -104,8 +146,13 @@ void VerificaSenha(void){
       }
 
       if(posicao == TAM_SENHA - 2){
-
-        if(strcmp(senhaIns, senha) == 0){
+         
+        for(cont2 = INICIO_SENHA_MESTRA, cont3 = 0; cont2 <= cont; cont2++, cont3++){
+          key = EEPROM.read(cont2);
+          senhaMomento[cont3] = key;
+        }
+        
+        if(strcmp(senhaIns, senhaMomento) == 0){
           lcd.clear();
           lcd.setCursor(0,0);
           lcd.print("NEXT");
@@ -208,6 +255,7 @@ void VerificaSenha2(void){
 }
 
 void setup(){
+  Serial.begin(9600);  
   lcd.begin(16,2);
   pinMode(relePin, OUTPUT);
   pinMode(botao, INPUT);
@@ -219,7 +267,15 @@ void setup(){
   
 void loop(){
   
-  if(flag == 0){
+  
+  EEPROM.get(0, flagMem);
+  
+  if(flagMem == 0){
+    ConfiguracaoSenhaMestra();
+  }
+  
+  if(flag == 0 && flagMem == 1){
+    lcd.clear();
     flag = 1;
     lcd.print("CLOSED");
   }
