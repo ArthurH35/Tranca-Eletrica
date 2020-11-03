@@ -25,6 +25,7 @@ Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 #define TAM_SENHA 6
 #define MAX_SENHAS 3
 #define INICIO_SENHA_MESTRA 100
+#define CONTADOR_SENHA_MESTRA 10
 
 int botState = 0;
 int flag = 0, flag2 = 0, flag3 = 0, flag4 = 0; 
@@ -78,6 +79,7 @@ void ConfiguracaoSenhaMestra(void){
       
       if(key == '*'){
         EEPROM.write(cont, key);
+        EEPROM.write(CONTADOR_SENHA_MESTRA, cont);
         EEPROM.put(0, 1);
     	EEPROM.get(0, flagMem);
         break;
@@ -146,6 +148,8 @@ void VerificaSenha(void){
       }
 
       if(posicao == TAM_SENHA - 2){
+        
+        cont = EEPROM.read(CONTADOR_SENHA_MESTRA);
          
         for(cont2 = INICIO_SENHA_MESTRA, cont3 = 0; cont2 <= cont; cont2++, cont3++){
           key = EEPROM.read(cont2);
