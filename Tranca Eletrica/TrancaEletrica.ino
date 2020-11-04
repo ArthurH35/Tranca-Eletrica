@@ -24,8 +24,20 @@ Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 #define TAM_SENHA 6
 #define MAX_SENHAS 3
+#define MAX_USUARIOS 4
+
 #define INICIO_SENHA_MESTRA 100
 #define CONTADOR_SENHA_MESTRA 10
+#define INICIO_SENHA_A 200
+#define CONTADOR_SENHA_A 20
+#define INICIO_SENHA_B 300
+#define CONTADOR_SENHA_B 30
+#define INICIO_SENHA_C 400
+#define CONTADOR_SENHA_C 40
+#define INICIO_SENHA_D 500
+#define CONTADOR_SENHA_D 50
+#define QUANTIDADE_SENHAS 60
+#define QUANTIDADE_USUARIOS 70
 
 int botState = 0;
 int flag = 0, flag2 = 0, flag3 = 0, flag4 = 0; 
@@ -34,6 +46,12 @@ int posicao = 0;
 int tentativas = 0;
 int aux;
 int cont, cont2, cont3;
+int enderecoQuantSenhas;
+char auxQuant;
+char quantUsuarios = 0;
+char quantSenhas[MAX_USUARIOS] = {0};
+char contUsuarios[MAX_USUARIOS][MAX_SENHAS] = {0};
+char auxUsuario = 'A';
 char usuario;
 char key;
 char senhaA[MAX_SENHAS][TAM_SENHA] = {{"5678*"},
@@ -58,7 +76,7 @@ char senhaIns[TAM_SENHA] = {0};
 void ConfiguracaoSenhaMestra(void){
   if(flagConfig == 0){
     lcd.clear();
-    lcd.print("Insira a senha");
+    lcd.print("Defina a senha");
     lcd.setCursor(0,1);
     lcd.print("mestra");
     
@@ -79,7 +97,7 @@ void ConfiguracaoSenhaMestra(void){
       
       if(key == '*'){
         EEPROM.write(cont, key);
-        EEPROM.write(CONTADOR_SENHA_MESTRA, cont);
+        EEPROM.put(CONTADOR_SENHA_MESTRA, cont);
         EEPROM.put(0, 1);
     	EEPROM.get(0, flagMem);
         break;
@@ -90,8 +108,89 @@ void ConfiguracaoSenhaMestra(void){
         EEPROM.write(cont, key);
         cont++;      
       }
+      
+      if(cont - INICIO_SENHA_MESTRA > TAM_SENHA - 1){
+        lcd.clear();
+        lcd.print("Limite");
+        lcd.setCursor(0,1);
+        lcd.print("Ultrapassado");
+        delay(1000);
+        
+        flagConfig = 0;
+        break;
+      }
     }
   }
+}
+
+void ConfiguracaoUsuarios(void){
+  while(1){
+    if(flagConfig == 1){
+      lcd.clear();
+      lcd.print("Insira a quant");
+      lcd.setCursor(0,1);
+      lcd.print("de usuarios");
+    
+      flagConfig = 2;
+    }
+    
+    key = keypad.getKey();
+      
+    if(key){
+      if(key > '0' && key <= '4'){
+        quantUsuarios = key;
+        EEPROM.put(QUANTIDADE_USUARIOS, quantUsuarios);
+        break;
+      }else{
+        lcd.clear();
+        lcd.print("Valor invalido");
+        delay(1000);
+          
+        flagConfig = 1;
+      }
+    }
+  }
+
+  
+  if(flagConfig == 2){
+    enderecoQuantSenhas = QUANTIDADE_SENHAS;
+    
+    for(auxQuant = '0'; auxQuant < quantUsuarios; auxQuant++){
+      lcd.clear();
+      lcd.print("Insira a quant");
+      lcd.setCursor(0,1);
+      lcd.print("de senhas ");
+      lcd.print(auxUsuario);
+
+      while(1){
+        key = keypad.getKey();
+
+        if(key){
+          if(key > '0' && key <= '3'){
+            quantSenhas[auxQuant] = key;
+            EEPROM.put(enderecoQuantSenhas, quantSenhas);
+          
+            enderecoQuantSenhas++;
+            auxUsuario++;
+            break;
+          }else{
+            lcd.clear();
+        	lcd.print("Valor invalido");
+        	delay(1000);
+            auxQuant--;
+            break;
+          }
+        }
+      }
+      
+      if(auxQuant == quantUsuarios - 1){
+        EEPROM.put(0, 2);
+        EEPROM.get(0, flagMem);
+      }
+    }
+  }
+  
+  flagConfig = 3;
 }
 
 void SenhaErrada(void){
@@ -147,9 +246,9 @@ void VerificaSenha(void){
         senhaIns[posicao] = key;
       }
 
-      if(posicao == TAM_SENHA - 2){
+      if(senhaIns[posicao] == '*'){
         
-        cont = EEPROM.read(CONTADOR_SENHA_MESTRA);
+        EEPROM.get(CONTADOR_SENHA_MESTRA, cont);
          
         for(cont2 = INICIO_SENHA_MESTRA, cont3 = 0; cont2 <= cont; cont2++, cont3++){
           key = EEPROM.read(cont2);
@@ -231,7 +330,7 @@ void VerificaSenha2(void){
 
         lcd.print(key);
 
-        if(posicao == TAM_SENHA - 2){
+        if(senhaIns[posicao] == '*'){
 
           if(strcmp(senhaIns, senhaMomento) == 0){
             lcd.clear();
@@ -269,16 +368,21 @@ void setup(){
   digitalWrite(relePin, LOW);
 }
   
-void loop(){
-  
+void loop(){ 
   
   EEPROM.get(0, flagMem);
   
   if(flagMem == 0){
     ConfiguracaoSenhaMestra();
+    
+    if(flagMem == 1){
+      ConfiguracaoUsuarios();
+    }
   }
   
-  if(flag == 0 && flagMem == 1){
+  EEPROM.get(0, flagMem);
+  
+  if(flag == 0 && flagMem == 2){
     lcd.clear();
     flag = 1;
     lcd.print("CLOSED");
