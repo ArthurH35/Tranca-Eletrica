@@ -22,7 +22,7 @@ byte colPins[COLS] = {5,4,3,2};
 
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
-#define TAM_SENHA 6
+#define TAM_SENHA 16
 #define MAX_SENHAS 3
 #define MAX_USUARIOS 4
 
