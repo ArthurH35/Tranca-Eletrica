@@ -93,7 +93,7 @@ void ConfiguracaoSenhaMestra(void){
         cont++;      
       }
       
-      if(cont - INICIO_SENHA_MESTRA > TAM_SENHA - 1){
+      if(cont - INICIO_SENHA_MESTRA > TAM_SENHA - 2){
         lcd.clear();
         lcd.print("Limite");
         lcd.setCursor(0,1);
@@ -464,11 +464,15 @@ void Alarme(void){
   tone(buzz, 2000, 10000);
   delay(10000);
   
+  ReiniciaSistema();
+}
+
+void UsuarioInvalido(void){
   lcd.clear();
   lcd.setCursor(0,0);
-  posicao = 0;
-  tentativas = 0;
-  flag = 0;
+  lcd.print("ERROR");
+  delay(2000);
+  ReiniciaSistema();
 }
 
 void ReiniciaSistema(void){
@@ -487,6 +491,7 @@ void VerificaSenha(void){
   key = keypad.getKey();
 
   if(key){
+    LimpaSenhaMomento();
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.print(key);
@@ -499,41 +504,52 @@ void VerificaSenha(void){
         lcd.print(key);
         posicao++;
         senhaIns[posicao] = key;
-      }
-
-      if(senhaIns[posicao] == '*'){
-        
-        EEPROM.get(CONTADOR_SENHA_MESTRA, cont);
-         
-        for(cont2 = INICIO_SENHA_MESTRA, cont3 = 0; cont2 <= cont; cont2++, cont3++){
-          key = EEPROM.read(cont2);
-          senhaMomento[cont3] = key;
-        }
-        
-        if(strcmp(senhaIns, senhaMomento) == 0){
-          Serial.println(senhaMomento);
-          Serial.println(senhaIns);
-          lcd.clear();
-          lcd.setCursor(0,0);
-          lcd.print("NEXT");
-          tone(buzz, 500, 700);
-
-          flag2 = 1;
-          posicao = 0;
-          lcd.setCursor(0,0);
-          LimpaSenhaIns();
-          LimpaSenhaMomento();
-
-        }else{
+      
+        if(posicao == TAM_SENHA - 2 && key != '*'){
           SenhaErrada();
           LimpaSenhaIns();
+
+          if(tentativas == 3){
+            Alarme();
+          }
+
+          break;
         }
 
-        if(tentativas == 3){
-		  Alarme();
-        }
+        if(senhaIns[posicao] == '*'){
 
-        break;
+          EEPROM.get(CONTADOR_SENHA_MESTRA, cont);
+
+          for(cont2 = INICIO_SENHA_MESTRA, cont3 = 0; cont2 <= cont; cont2++, cont3++){
+            key = EEPROM.read(cont2);
+            senhaMomento[cont3] = key;
+          }
+
+          if(strcmp(senhaIns, senhaMomento) == 0){
+            Serial.println(senhaMomento);
+            Serial.println(senhaIns);
+            lcd.clear();
+            lcd.setCursor(0,0);
+            lcd.print("NEXT");
+            tone(buzz, 500, 700);
+
+            flag2 = 1;
+            posicao = 0;
+            lcd.setCursor(0,0);
+            LimpaSenhaIns();
+            LimpaSenhaMomento();
+
+          }else{
+            SenhaErrada();
+            LimpaSenhaIns();
+          }
+
+          if(tentativas == 3){
+            Alarme();
+          }
+
+          break;
+        }
       }
     }
   }
@@ -585,11 +601,7 @@ void VerificaSenha2(void){
             senhaMomento[cont3] = key;
           }
         }else{
-          lcd.clear();
-          lcd.setCursor(0,0);
-          lcd.print("ERROR");
-          delay(2000);
-          ReiniciaSistema();
+          UsuarioInvalido();
         }
         
         Serial.println(senhaMomento);
@@ -613,11 +625,7 @@ void VerificaSenha2(void){
             senhaMomento[cont3] = key;
           }
         }else{
-          lcd.clear();
-          lcd.setCursor(0,0);
-          lcd.print("ERROR");
-          delay(2000);
-          ReiniciaSistema();
+          UsuarioInvalido();
         }
         
         Serial.println(senhaMomento);
@@ -641,21 +649,13 @@ void VerificaSenha2(void){
             senhaMomento[cont3] = key;
           }
         }else{
-          lcd.clear();
-          lcd.setCursor(0,0);
-          lcd.print("ERROR");
-          delay(2000);
-          ReiniciaSistema();
+          UsuarioInvalido();
         }
         
         Serial.println(senhaMomento);
         break;
       default:
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print("ERROR");
-        delay(2000);
-        ReiniciaSistema();
+        UsuarioInvalido();
     }
   }
   
@@ -674,8 +674,17 @@ void VerificaSenha2(void){
       if(key){
         posicao++;
         senhaIns[posicao] = key;
-
         lcd.print(key);
+        
+        if(posicao == TAM_SENHA - 2 && key != '*'){
+          SenhaErrada();
+          LimpaSenhaIns();
+                  
+          if(tentativas == 3){
+            Alarme();
+          }
+          break;
+        }
 
         if(senhaIns[posicao] == '*'){
 
@@ -707,19 +716,7 @@ void VerificaSenha2(void){
   }
 }
 
-void setup(){
-  Serial.begin(9600);  
-  lcd.begin(16,2);
-  pinMode(relePin, OUTPUT);
-  pinMode(botao, INPUT);
-  pinMode(buzz, OUTPUT);
-  
-  randomSeed(analogRead(A0));
-  digitalWrite(relePin, LOW);
-}
-  
-void loop(){ 
-  
+void Configuracao(void){
   EEPROM.get(0, flagMem);
   
   if(flagMem == 0){
@@ -747,7 +744,9 @@ void loop(){
       ConfiguracaoSenhaD();
     }
   }
-  
+}
+
+void EstadoInicial(void){
   EEPROM.get(0, flagMem);
   
   if(flag == 0 && flagMem >= 2){
@@ -755,7 +754,9 @@ void loop(){
     flag = 1;
     lcd.print("CLOSED");
   }
-  
+}
+
+void AbrirPortaBotao(void){
   botState = digitalRead(botao);
   
   if(botState){
@@ -767,30 +768,53 @@ void loop(){
     delay(2000);
     ReiniciaSistema();
   }
+}
+
+void RecebeUsuario(void){
+  if(flag3 == 0){    
+    while(1){
+	  usuario = keypad.getKey();
+    
+      if(usuario){
+        flag3 = 1;
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("Usuario: ");
+        lcd.print(usuario);
+          
+        break;
+      }
+    }
+  }   
+  VerificaSenha2();
+}
+
+void setup(){
+  Serial.begin(9600);  
+  lcd.begin(16,2);
+  pinMode(relePin, OUTPUT);
+  pinMode(botao, INPUT);
+  pinMode(buzz, OUTPUT);
+  
+  /*for (int i = 0 ; i < EEPROM.length() ; i++){
+    EEPROM.write(i, 0);
+  }*/
+  
+  randomSeed(analogRead(A0));
+  digitalWrite(relePin, LOW);
+}
+  
+void loop(){ 
+  Configuracao();
+  EstadoInicial();
+  AbrirPortaBotao();
   
   if(flag2 == 0){
     VerificaSenha();
   }
   
   if(flag2 == 1){
-    if(flag3 == 0){
-      
-      while(1){
-	    usuario = keypad.getKey();
-    
-        if(usuario){
-          flag3 = 1;
-          lcd.clear();
-          lcd.setCursor(0,0);
-          lcd.print("Usuario: ");
-          lcd.print(usuario);
-          
-          break;
-        }
-      }
-    }
-    
-    VerificaSenha2();
+	RecebeUsuario();
   }
   
   delay(10);
