@@ -47,6 +47,7 @@ int tentativas = 0;
 int aux, aux2, aux3;
 int cont, cont2, cont3, cont4;
 int enderecoQuantSenhas;
+int momentoAlarme;
 char auxQuant;
 char quantUsuarios = 0;
 char quantSenhas;
@@ -57,12 +58,23 @@ char key;
 char senhaMomento[TAM_SENHA] = {0};
 char senhaIns[TAM_SENHA] = {0};
 
+void LimiteSenha(void){
+  lcd.clear();
+  lcd.setCursor(5,0);
+  lcd.print("Limite");
+  lcd.setCursor(2,1);
+  lcd.print("Ultrapassado");
+  delay(1000);
+}
+
 void ConfiguracaoSenhaMestra(void){
+  EEPROM.put(2, 0);
   if(flagConfig == 0){
     lcd.clear();
-    lcd.print("Defina a senha");
-    lcd.setCursor(0,1);
-    lcd.print("mestra");
+    lcd.setCursor(1,0);
+    lcd.print("Defina a Senha");
+    lcd.setCursor(5,1);
+    lcd.print("Mestra");
     
     flagConfig = 1;
     cont = INICIO_SENHA_MESTRA;
@@ -72,6 +84,7 @@ void ConfiguracaoSenhaMestra(void){
     
   if(key){
     lcd.clear();
+    lcd.setCursor(1,0);
     lcd.print(key);
     EEPROM.write(cont, key);
     cont++;
@@ -84,6 +97,7 @@ void ConfiguracaoSenhaMestra(void){
         EEPROM.put(CONTADOR_SENHA_MESTRA, cont);
         EEPROM.put(0, 1);
     	EEPROM.get(0, flagMem);
+        EEPROM.put(2, 1);
         break;
       }
       
@@ -94,11 +108,7 @@ void ConfiguracaoSenhaMestra(void){
       }
       
       if(cont - INICIO_SENHA_MESTRA > TAM_SENHA - 2){
-        lcd.clear();
-        lcd.print("Limite");
-        lcd.setCursor(0,1);
-        lcd.print("Ultrapassado");
-        delay(1000);
+        LimiteSenha();
         
         flagConfig = 0;
         break;
@@ -108,41 +118,50 @@ void ConfiguracaoSenhaMestra(void){
 }
 
 void ConfiguracaoUsuarios(void){
-  while(1){
-    if(flagConfig == 1){
-      lcd.clear();
-      lcd.print("Insira a quant");
-      lcd.setCursor(0,1);
-      lcd.print("de usuarios");
-    
-      flagConfig = 2;
-    }
-    
-    key = keypad.getKey();
-      
-    if(key){
-      if(key > '0' && key <= '4'){
-        quantUsuarios = key;
-        EEPROM.put(QUANTIDADE_USUARIOS, quantUsuarios);
-        break;
-      }else{
+  EEPROM.get(2, flagConfig);
+  if(flagConfig == 1){
+    while(1){
+      if(flagConfig == 1){
         lcd.clear();
-        lcd.print("Valor invalido");
-        delay(1000);
-          
-        flagConfig = 1;
+        lcd.setCursor(1,0);
+        lcd.print("Insira a Quant");
+        lcd.setCursor(2,1);
+        lcd.print("de Usuarios");
+
+        flagConfig = 2;
+      }
+
+      key = keypad.getKey();
+
+      if(key){
+        if(key > '0' && key <= '4'){
+          quantUsuarios = key;
+          EEPROM.put(QUANTIDADE_USUARIOS, quantUsuarios);
+          EEPROM.put(2, 2);
+          break;
+        }else{
+          lcd.clear();
+          lcd.setCursor(1,0);
+          lcd.print("Valor Invalido");
+          delay(1000);
+
+          flagConfig = 1;
+        }
       }
     }
   }
   
+  EEPROM.get(QUANTIDADE_USUARIOS, quantUsuarios);
+  EEPROM.get(2, flagConfig);
   if(flagConfig == 2){
     enderecoQuantSenhas = QUANTIDADE_SENHAS;
     
     for(auxQuant = '0'; auxQuant < quantUsuarios; auxQuant++){
       lcd.clear();
-      lcd.print("Insira a quant");
-      lcd.setCursor(0,1);
-      lcd.print("de senhas ");
+      lcd.setCursor(1,0);
+      lcd.print("Insira a Quant");
+      lcd.setCursor(2,1);
+      lcd.print("de Senhas ");
       lcd.print(auxUsuario);
 
       while(1){
@@ -157,6 +176,7 @@ void ConfiguracaoUsuarios(void){
             break;
           }else{
             lcd.clear();
+            lcd.setCursor(1,0);
         	lcd.print("Valor invalido");
         	delay(1000);
             auxQuant--;
@@ -184,16 +204,18 @@ void ConfiguracaoSenhaA(void){
 
   for(auxQuant = '0'; auxQuant < quantSenhas; auxQuant++){
     lcd.clear();
-    lcd.print("Defina a senha");
-    lcd.setCursor(0,1);
+    lcd.setCursor(1,0);
+    lcd.print("Defina a Senha");
+    lcd.setCursor(1,1);
     lcd.print(aux);
-    lcd.print(" A");
+    lcd.print(" do Usuario A");
 
     while(1){
       key = keypad.getKey();
 
       if(key){
         lcd.clear();
+        lcd.setCursor(1,0);
         lcd.print(key);
         EEPROM.write(cont, key);
         cont++;
@@ -204,9 +226,12 @@ void ConfiguracaoSenhaA(void){
           if(key == '*'){
             EEPROM.write(cont, key);
             EEPROM.put(CONTADOR_SENHA_A + aux2, cont);
-            EEPROM.put(0, 3);
-            EEPROM.get(0, flagMem);
             
+            if(auxQuant == quantSenhas - 1){
+              EEPROM.put(0, 3);
+              EEPROM.get(0, flagMem);
+            }
+              
             aux++;
             cont = (INICIO_SENHA_A + ((TAM_SENHA - 1) * (aux - 1)));
             aux2 += 2;
@@ -222,13 +247,8 @@ void ConfiguracaoSenhaA(void){
           aux3 = (INICIO_SENHA_A + ((TAM_SENHA - 1) * (aux - 1)));
 
           if(cont - aux3 > TAM_SENHA - 2){
-            Serial.println(cont);
-            lcd.clear();
-            lcd.print("Limite");
-            lcd.setCursor(0,1);
-            lcd.print("Ultrapassado");
-            delay(1000);
-
+            LimiteSenha();
+            
             auxQuant -= 1;
             cont = aux3;
             break;
@@ -250,16 +270,18 @@ void ConfiguracaoSenhaB(void){
 
   for(auxQuant = '0'; auxQuant < quantSenhas; auxQuant++){
     lcd.clear();
-    lcd.print("Defina a senha");
-    lcd.setCursor(0,1);
+    lcd.setCursor(1,0);
+    lcd.print("Defina a Senha");
+    lcd.setCursor(1,1);
     lcd.print(aux);
-    lcd.print(" B");
+    lcd.print(" do Usuario B");
 
     while(1){
       key = keypad.getKey();
 
       if(key){
         lcd.clear();
+        lcd.setCursor(1,0);
         lcd.print(key);
         EEPROM.write(cont, key);
         cont++;
@@ -270,8 +292,11 @@ void ConfiguracaoSenhaB(void){
           if(key == '*'){
             EEPROM.write(cont, key);
             EEPROM.put(CONTADOR_SENHA_B + aux2, cont);
-            EEPROM.put(0, 4);
-            EEPROM.get(0, flagMem);
+            
+            if(auxQuant == quantSenhas - 1){
+              EEPROM.put(0, 4);
+              EEPROM.get(0, flagMem);
+            }
             
             aux++;
             cont = (INICIO_SENHA_B + ((TAM_SENHA - 1) * (aux - 1)));
@@ -288,12 +313,8 @@ void ConfiguracaoSenhaB(void){
           aux3 = (INICIO_SENHA_B + ((TAM_SENHA - 1) * (aux - 1)));
 
           if(cont - aux3 > TAM_SENHA - 2){
-            lcd.clear();
-            lcd.print("Limite");
-            lcd.setCursor(0,1);
-            lcd.print("Ultrapassado");
-            delay(1000);
-
+            LimiteSenha();
+            
             auxQuant -= 1;
             cont = aux3;
             break;
@@ -315,16 +336,18 @@ void ConfiguracaoSenhaC(void){
 
   for(auxQuant = '0'; auxQuant < quantSenhas; auxQuant++){
     lcd.clear();
-    lcd.print("Defina a senha");
-    lcd.setCursor(0,1);
+    lcd.setCursor(1,0);
+    lcd.print("Defina a Senha");
+    lcd.setCursor(1,1);
     lcd.print(aux);
-    lcd.print(" C");
+    lcd.print(" do Usuario C");
 
     while(1){
       key = keypad.getKey();
 
       if(key){
         lcd.clear();
+        lcd.setCursor(1,0);
         lcd.print(key);
         EEPROM.write(cont, key);
         cont++;
@@ -335,8 +358,11 @@ void ConfiguracaoSenhaC(void){
           if(key == '*'){
             EEPROM.write(cont, key);
             EEPROM.put(CONTADOR_SENHA_C + aux2, cont);
-            EEPROM.put(0, 5);
-            EEPROM.get(0, flagMem);
+            
+            if(auxQuant == quantSenhas - 1){
+              EEPROM.put(0, 5);
+              EEPROM.get(0, flagMem);
+            }
             
             aux++;
             cont = (INICIO_SENHA_C + ((TAM_SENHA - 1) * (aux - 1)));
@@ -353,11 +379,7 @@ void ConfiguracaoSenhaC(void){
           aux3 = (INICIO_SENHA_C + ((TAM_SENHA - 1) * (aux - 1)));
 
           if(cont - aux3 > TAM_SENHA - 2){
-            lcd.clear();
-            lcd.print("Limite");
-            lcd.setCursor(0,1);
-            lcd.print("Ultrapassado");
-            delay(1000);
+            LimiteSenha();
 
             auxQuant -= 1;
             cont = aux3;
@@ -380,16 +402,18 @@ void ConfiguracaoSenhaD(void){
 
   for(auxQuant = '0'; auxQuant < quantSenhas; auxQuant++){
     lcd.clear();
-    lcd.print("Defina a senha");
-    lcd.setCursor(0,1);
+    lcd.setCursor(1,0);
+    lcd.print("Defina a Senha");
+    lcd.setCursor(1,1);
     lcd.print(aux);
-    lcd.print(" D");
+    lcd.print(" do Usuario D");
 
     while(1){
       key = keypad.getKey();
 
       if(key){
         lcd.clear();
+        lcd.setCursor(1,0);
         lcd.print(key);
         EEPROM.write(cont, key);
         cont++;
@@ -400,8 +424,11 @@ void ConfiguracaoSenhaD(void){
           if(key == '*'){
             EEPROM.write(cont, key);
             EEPROM.put(CONTADOR_SENHA_D + aux2, cont);
-            EEPROM.put(0, 6);
-            EEPROM.get(0, flagMem);
+            
+            if(auxQuant == quantSenhas - 1){
+              EEPROM.put(0, 6);
+              EEPROM.get(0, flagMem);
+            }
             
             aux++;
             cont = (INICIO_SENHA_D + ((TAM_SENHA - 1) * (aux - 1)));
@@ -418,11 +445,7 @@ void ConfiguracaoSenhaD(void){
           aux3 = (INICIO_SENHA_D + ((TAM_SENHA - 1) * (aux - 1)));
 
           if(cont - aux3 > TAM_SENHA - 2){
-            lcd.clear();
-            lcd.print("Limite");
-            lcd.setCursor(0,1);
-            lcd.print("Ultrapassado");
-            delay(1000);
+            LimiteSenha();
 
             auxQuant -= 1;
             cont = aux3;
@@ -450,29 +473,48 @@ void LimpaSenhaIns(void){
 
 void SenhaErrada(void){
   lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("WRONG");
-  tone(buzz, 1000, 700);
+  lcd.setCursor(1,0);
+  lcd.print("Senha Invalida");
+  tone(buzz, 700, 400);
   tentativas++;
   posicao = 0;
 }
 
 void Alarme(void){
   lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("BLOCKED");
-  tone(buzz, 2000, 10000);
-  delay(10000);
+  lcd.setCursor(5,0);
+  lcd.print("Acesso");
+  lcd.setCursor(4,1);
+  lcd.print("Bloqueado");
+  momentoAlarme = millis();
+  
+  while(1){
+    tone(buzz, 1300, 200);
+    delay(400);
+  
+    if(millis() - momentoAlarme >= 10000){
+      break;
+    }
+  }
   
   ReiniciaSistema();
 }
 
 void UsuarioInvalido(void){
   lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("ERROR");
+  lcd.print("Usuario Invalido");
   delay(2000);
   ReiniciaSistema();
+}
+
+void SenhaAleatoria(void){
+  aux2 = quantSenhas - 48;    
+  aux = random(0,aux2);
+  lcd.setCursor(5,1);
+  lcd.print("Senha ");
+  aux++;
+  lcd.print(aux);
+  aux--;
 }
 
 void ReiniciaSistema(void){
@@ -493,7 +535,7 @@ void VerificaSenha(void){
   if(key){
     LimpaSenhaMomento();
     lcd.clear();
-    lcd.setCursor(0,0);
+    lcd.setCursor(1,0);
     lcd.print(key);
     senhaIns[posicao] = key;
 
@@ -529,9 +571,11 @@ void VerificaSenha(void){
             Serial.println(senhaMomento);
             Serial.println(senhaIns);
             lcd.clear();
-            lcd.setCursor(0,0);
-            lcd.print("NEXT");
-            tone(buzz, 500, 700);
+            lcd.setCursor(3,0);
+            lcd.print("Informe o");
+            lcd.setCursor(4,1);
+            lcd.print("Usuario");
+            tone(buzz, 500, 400);
 
             flag2 = 1;
             posicao = 0;
@@ -564,14 +608,8 @@ void VerificaSenha2(void){
     switch(usuario){
       case 'A':
         EEPROM.get(QUANTIDADE_SENHAS, quantSenhas);
-        aux2 = quantSenhas - 48;
-      
-    	aux = random(0,aux2);
-    	lcd.setCursor(0,1);
-    	lcd.print("Senha ");
-    	aux++;
-    	lcd.print(aux);
-    	aux--;
+        
+        SenhaAleatoria();
       
         EEPROM.get(CONTADOR_SENHA_A + aux * 2, cont);
          
@@ -585,14 +623,8 @@ void VerificaSenha2(void){
       case 'B':
         if(quantUsuarios >= '2'){
           EEPROM.get(QUANTIDADE_SENHAS + 1, quantSenhas);
-          aux2 = quantSenhas - 48;
-
-          aux = random(0,aux2);
-          lcd.setCursor(0,1);
-          lcd.print("Senha ");
-          aux++;
-          lcd.print(aux);
-          aux--;
+          
+          SenhaAleatoria();
 
           EEPROM.get(CONTADOR_SENHA_B + aux * 2, cont);
 
@@ -609,14 +641,8 @@ void VerificaSenha2(void){
       case 'C':
         if(quantUsuarios >= '3'){
           EEPROM.get(QUANTIDADE_SENHAS + 2, quantSenhas);
-          aux2 = quantSenhas - 48;
-
-          aux = random(0,aux2);
-          lcd.setCursor(0,1);
-          lcd.print("Senha ");
-          aux++;
-          lcd.print(aux);
-          aux--;
+          
+          SenhaAleatoria();
 
           EEPROM.get(CONTADOR_SENHA_C + aux * 2, cont);
 
@@ -635,12 +661,7 @@ void VerificaSenha2(void){
           EEPROM.get(QUANTIDADE_SENHAS + 3, quantSenhas);
           aux2 = quantSenhas - 48;
 
-          aux = random(0,aux2);
-          lcd.setCursor(0,1);
-          lcd.print("Senha ");
-          aux++;
-          lcd.print(aux);
-          aux--;
+          SenhaAleatoria();
 
           EEPROM.get(CONTADOR_SENHA_D + aux * 2, cont);
 
@@ -665,7 +686,7 @@ void VerificaSenha2(void){
     senhaIns[posicao] = key;
       
     lcd.clear();
-    lcd.setCursor(0,0);
+    lcd.setCursor(1,0);
     lcd.print(key);
     
     while(1){
@@ -690,10 +711,10 @@ void VerificaSenha2(void){
 
           if(strcmp(senhaIns, senhaMomento) == 0){
             lcd.clear();
-            lcd.setCursor(0,0);
-            lcd.print("OPEN");
+            lcd.setCursor(5,0);
+            lcd.print("Aberto");
             digitalWrite(relePin, HIGH);
-            tone(buzz, 500, 700);
+            tone(buzz, 500, 400);
             
             delay(2000);
             LimpaSenhaMomento();
@@ -721,28 +742,28 @@ void Configuracao(void){
   
   if(flagMem == 0){
     ConfiguracaoSenhaMestra();
+  } 
+ 
+  if(flagMem == 1){
+    ConfiguracaoUsuarios();
+  }
+  
+  EEPROM.get(QUANTIDADE_USUARIOS, quantUsuarios);
     
-    if(flagMem == 1){
-      ConfiguracaoUsuarios();
-      
-      EEPROM.get(QUANTIDADE_USUARIOS, quantUsuarios);
-    }
+  if(flagMem == 2){
+    ConfiguracaoSenhaA();
+  }
     
-    if(flagMem == 2){
-      ConfiguracaoSenhaA();
-    }
+  if(flagMem == 3 && quantUsuarios >= 2){
+    ConfiguracaoSenhaB();
+  }
     
-    if(flagMem == 3 && quantUsuarios >= 2){
-      ConfiguracaoSenhaB();
-    }
+  if(flagMem == 4 && quantUsuarios >= 3){
+    ConfiguracaoSenhaC();
+  }
     
-    if(flagMem == 4 && quantUsuarios >= 3){
-      ConfiguracaoSenhaC();
-    }
-    
-    if(flagMem == 5 && quantUsuarios >= 4){
-      ConfiguracaoSenhaD();
-    }
+  if(flagMem == 5 && quantUsuarios >= 4){
+    ConfiguracaoSenhaD();
   }
 }
 
@@ -752,7 +773,8 @@ void EstadoInicial(void){
   if(flag == 0 && flagMem >= 2){
     lcd.clear();
     flag = 1;
-    lcd.print("CLOSED");
+    lcd.setCursor(4,0);
+    lcd.print("Fechado");
   }
 }
 
@@ -762,9 +784,9 @@ void AbrirPortaBotao(void){
   if(botState){
     digitalWrite(relePin, HIGH);
     lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("OPEN");
-    tone(buzz, 900, 700);
+    lcd.setCursor(5,0);
+    lcd.print("Aberto");
+    tone(buzz, 500, 400);
     delay(2000);
     ReiniciaSistema();
   }
@@ -778,7 +800,7 @@ void RecebeUsuario(void){
       if(usuario){
         flag3 = 1;
         lcd.clear();
-        lcd.setCursor(0,0);
+        lcd.setCursor(3,0);
         lcd.print("Usuario: ");
         lcd.print(usuario);
           
