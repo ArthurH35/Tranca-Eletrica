@@ -3,29 +3,39 @@
 #include <Keypad.h>
 #include <string.h>
 
-#define relePin 12
 #define botao 10
 #define buzz 11
+#define relePin 12
 
 LiquidCrystal lcd(13,15,16,17,18,19);
 
-const byte ROWS = 4; 
-const byte COLS = 4; 
-char keys[ROWS][COLS] = {
+const byte LINHAS = 4; 
+const byte COLUNAS = 4; 
+char keys[LINHAS][COLUNAS] = {
   {'1','2','3', 'A'},
   {'4','5','6', 'B'},
   {'7','8','9', 'C'},
   {'*','0','#', 'D'}
 };
-byte rowPins[ROWS] = {9,8,7,6}; 
-byte colPins[COLS] = {5,4,3,2};
+byte linPins[LINHAS] = {9,8,7,6}; 
+byte colPins[COLUNAS] = {5,4,3,2};
 
-Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
+Keypad keypad = Keypad( makeKeymap(keys), linPins, colPins, LINHAS, COLUNAS );
 
+/*  A constante define o tamanho limite da senha como 16,
+  mas o tamanho real eh 14, sendo um espaco reservado para
+  o caracter '*' (que possui a funcao de confirmar) e o outro
+  para o '\0' da string.*/
 #define TAM_SENHA 16
 #define MAX_SENHAS 3
 #define MAX_USUARIOS 4
 
+/*  OBS: Todas as seguintes constantes consistem em enderecos da memoria 
+  EEPROM.
+    As constates que possuem "CONTADOR" no nome correspondem aos
+  enderecos que armazenam onde as senhas terminam (valores que
+  tambem sao enderecos da memoria EEPROM/Flash, os quais iniciam-se
+  nas constantes com o nome "INICIO").*/
 #define INICIO_SENHA_MESTRA 100
 #define CONTADOR_SENHA_MESTRA 10
 #define INICIO_SENHA_A 200
@@ -38,6 +48,8 @@ Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 #define CONTADOR_SENHA_D 50
 #define QUANTIDADE_SENHAS 60
 #define QUANTIDADE_USUARIOS 70
+#define ENDERECO_MEM 0
+#define ENDERECO_CONFIG 2
 
 int botState = 0;
 int flag = 0, flag2 = 0, flag3 = 0, flag4 = 0; 
@@ -47,11 +59,10 @@ int tentativas = 0;
 int aux, aux2, aux3;
 int cont, cont2, cont3, cont4;
 int enderecoQuantSenhas;
-int momentoAlarme;
+unsigned long int momentoAlarme;
 char auxQuant;
-char quantUsuarios = 0;
+char quantUsuarios;
 char quantSenhas;
-char contUsuarios;
 char auxUsuario = 'A';
 char usuario;
 char key;
@@ -68,7 +79,7 @@ void LimiteSenha(void){
 }
 
 void ConfiguracaoSenhaMestra(void){
-  EEPROM.put(2, 0);
+  EEPROM.put(ENDERECO_CONFIG, 0);
   if(flagConfig == 0){
     lcd.clear();
     lcd.setCursor(1,0);
@@ -95,8 +106,8 @@ void ConfiguracaoSenhaMestra(void){
       if(key == '*'){
         EEPROM.write(cont, key);
         EEPROM.put(CONTADOR_SENHA_MESTRA, cont);
-        EEPROM.put(0, 1);
-    	EEPROM.get(0, flagMem);
+        EEPROM.put(ENDERECO_MEM, 1);
+    	EEPROM.get(ENDERECO_MEM, flagMem);
         EEPROM.put(2, 1);
         break;
       }
@@ -118,7 +129,7 @@ void ConfiguracaoSenhaMestra(void){
 }
 
 void ConfiguracaoUsuarios(void){
-  EEPROM.get(2, flagConfig);
+  EEPROM.get(ENDERECO_CONFIG, flagConfig);
   if(flagConfig == 1){
     while(1){
       if(flagConfig == 1){
@@ -137,7 +148,7 @@ void ConfiguracaoUsuarios(void){
         if(key > '0' && key <= '4'){
           quantUsuarios = key;
           EEPROM.put(QUANTIDADE_USUARIOS, quantUsuarios);
-          EEPROM.put(2, 2);
+          EEPROM.put(ENDERECO_CONFIG, 2);
           break;
         }else{
           lcd.clear();
@@ -152,7 +163,7 @@ void ConfiguracaoUsuarios(void){
   }
   
   EEPROM.get(QUANTIDADE_USUARIOS, quantUsuarios);
-  EEPROM.get(2, flagConfig);
+  EEPROM.get(ENDERECO_CONFIG, flagConfig);
   if(flagConfig == 2){
     enderecoQuantSenhas = QUANTIDADE_SENHAS;
     
@@ -186,8 +197,8 @@ void ConfiguracaoUsuarios(void){
       }
       
       if(auxQuant == quantUsuarios - 1){
-        EEPROM.put(0, 2);
-        EEPROM.get(0, flagMem);
+        EEPROM.put(ENDERECO_MEM, 2);
+        EEPROM.get(ENDERECO_MEM, flagMem);
       }
     }
   }
@@ -195,10 +206,13 @@ void ConfiguracaoUsuarios(void){
   flagConfig = 3;
 }
 
-void ConfiguracaoSenhaA(void){ 
-  aux = 1;
-  aux2 = 0;
-  cont = INICIO_SENHA_A;
+void ConfiguracaoSenhaA(void){
+  /*  A mesma logica aplicada nessa funcao sera utilizada nas
+    demais configuracoes de senhas de usuarios, variando apenas
+    as constantes simbolicas e a quantidade de senhas.*/
+  aux = 1;//Representa a senha da iteracao atual
+  aux2 = 0;//Auxilia no controle do endereco em que cont sera armazenada
+  cont = INICIO_SENHA_A;//Representa o endereco em que os caracteres serao armazenados
   
   EEPROM.get(QUANTIDADE_SENHAS, quantSenhas);
 
@@ -228,10 +242,15 @@ void ConfiguracaoSenhaA(void){
             EEPROM.put(CONTADOR_SENHA_A + aux2, cont);
             
             if(auxQuant == quantSenhas - 1){
-              EEPROM.put(0, 3);
-              EEPROM.get(0, flagMem);
+              EEPROM.put(ENDERECO_MEM, 3);
+              EEPROM.get(ENDERECO_MEM, flagMem);
             }
-              
+            
+            /*  Ao concluir a configuracao da primeira senha, atualiza
+              as variaveis para que elas passem a representar a senha
+              seguinte.
+                OBS: aux2 recebe o valor 2 pelo fato de que um valor do
+              tipo int ocupa 2 bytes na memoria EEPROM.*/
             aux++;
             cont = (INICIO_SENHA_A + ((TAM_SENHA - 1) * (aux - 1)));
             aux2 += 2;
@@ -244,6 +263,8 @@ void ConfiguracaoSenhaA(void){
             cont++;      
           }
           
+          /*  aux3 representa o endereco limite para a senha, ou seja,
+            o maximo de caracteres permitidos em uma senha.*/
           aux3 = (INICIO_SENHA_A + ((TAM_SENHA - 1) * (aux - 1)));
 
           if(cont - aux3 > TAM_SENHA - 2){
@@ -294,8 +315,8 @@ void ConfiguracaoSenhaB(void){
             EEPROM.put(CONTADOR_SENHA_B + aux2, cont);
             
             if(auxQuant == quantSenhas - 1){
-              EEPROM.put(0, 4);
-              EEPROM.get(0, flagMem);
+              EEPROM.put(ENDERECO_MEM, 4);
+              EEPROM.get(ENDERECO_MEM, flagMem);
             }
             
             aux++;
@@ -360,8 +381,8 @@ void ConfiguracaoSenhaC(void){
             EEPROM.put(CONTADOR_SENHA_C + aux2, cont);
             
             if(auxQuant == quantSenhas - 1){
-              EEPROM.put(0, 5);
-              EEPROM.get(0, flagMem);
+              EEPROM.put(ENDERECO_MEM, 5);
+              EEPROM.get(ENDERECO_MEM, flagMem);
             }
             
             aux++;
@@ -426,8 +447,8 @@ void ConfiguracaoSenhaD(void){
             EEPROM.put(CONTADOR_SENHA_D + aux2, cont);
             
             if(auxQuant == quantSenhas - 1){
-              EEPROM.put(0, 6);
-              EEPROM.get(0, flagMem);
+              EEPROM.put(ENDERECO_MEM, 6);
+              EEPROM.get(ENDERECO_MEM, flagMem);
             }
             
             aux++;
@@ -508,6 +529,9 @@ void UsuarioInvalido(void){
 }
 
 void SenhaAleatoria(void){
+  /*  O keypad gera valores do tipo char, enquanto a funcao random
+   necessita de valores do tipo int. Diante disso, aux2 recebe o valor
+   convertido (com base na tabela ASCII) da quantidade de senhas.*/
   aux2 = quantSenhas - 48;    
   aux = random(0,aux2);
   lcd.setCursor(5,1);
@@ -568,8 +592,6 @@ void VerificaSenha(void){
           }
 
           if(strcmp(senhaIns, senhaMomento) == 0){
-            Serial.println(senhaMomento);
-            Serial.println(senhaIns);
             lcd.clear();
             lcd.setCursor(3,0);
             lcd.print("Informe o");
@@ -610,15 +632,16 @@ void VerificaSenha2(void){
         EEPROM.get(QUANTIDADE_SENHAS, quantSenhas);
         
         SenhaAleatoria();
-      
+        
+        //Recebe o endereco do ultimo caracter da senha "sorteada"
         EEPROM.get(CONTADOR_SENHA_A + aux * 2, cont);
-         
+        
+        //Ja cont2 recebe o endereco do primeiro caracter da senha sorteada
         for(cont2 = INICIO_SENHA_A + ((TAM_SENHA - 1) * aux), cont3 = 0; cont2 <= cont; cont2++, cont3++){
           key = EEPROM.read(cont2);
           senhaMomento[cont3] = key;
         }
       
-        Serial.println(senhaMomento);
         break;
       case 'B':
         if(quantUsuarios >= '2'){
@@ -635,8 +658,7 @@ void VerificaSenha2(void){
         }else{
           UsuarioInvalido();
         }
-        
-        Serial.println(senhaMomento);
+
         break;
       case 'C':
         if(quantUsuarios >= '3'){
@@ -654,7 +676,6 @@ void VerificaSenha2(void){
           UsuarioInvalido();
         }
         
-        Serial.println(senhaMomento);
         break;
       case 'D':
         if(quantUsuarios == '4'){
@@ -673,7 +694,6 @@ void VerificaSenha2(void){
           UsuarioInvalido();
         }
         
-        Serial.println(senhaMomento);
         break;
       default:
         UsuarioInvalido();
@@ -738,7 +758,7 @@ void VerificaSenha2(void){
 }
 
 void Configuracao(void){
-  EEPROM.get(0, flagMem);
+  EEPROM.get(ENDERECO_MEM, flagMem);
   
   if(flagMem == 0){
     ConfiguracaoSenhaMestra();
@@ -754,21 +774,21 @@ void Configuracao(void){
     ConfiguracaoSenhaA();
   }
     
-  if(flagMem == 3 && quantUsuarios >= 2){
+  if(flagMem == 3 && quantUsuarios >= '2'){
     ConfiguracaoSenhaB();
   }
     
-  if(flagMem == 4 && quantUsuarios >= 3){
+  if(flagMem == 4 && quantUsuarios >= '3'){
     ConfiguracaoSenhaC();
   }
     
-  if(flagMem == 5 && quantUsuarios >= 4){
+  if(flagMem == 5 && quantUsuarios >= '4'){
     ConfiguracaoSenhaD();
   }
 }
 
 void EstadoInicial(void){
-  EEPROM.get(0, flagMem);
+  EEPROM.get(ENDERECO_MEM, flagMem);
   
   if(flag == 0 && flagMem >= 2){
     lcd.clear();
@@ -812,12 +832,12 @@ void RecebeUsuario(void){
 }
 
 void setup(){
-  Serial.begin(9600);  
   lcd.begin(16,2);
   pinMode(relePin, OUTPUT);
   pinMode(botao, INPUT);
   pinMode(buzz, OUTPUT);
   
+  //Funcao para limpeza da memoria EEPROM
   /*for (int i = 0 ; i < EEPROM.length() ; i++){
     EEPROM.write(i, 0);
   }*/
@@ -831,7 +851,7 @@ void loop(){
   EstadoInicial();
   AbrirPortaBotao();
   
-  if(flag2 == 0){
+  if(flag2 == 0 && flagMem >= 2){
     VerificaSenha();
   }
   
