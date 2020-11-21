@@ -263,8 +263,7 @@ void ConfiguracaoSenhaA(void){
             cont++;      
           }
           
-          /*  aux3 representa o endereco limite para a senha, ou seja,
-            o maximo de caracteres permitidos em uma senha.*/
+          //aux3 representa o endereco inicial da senha atual.
           aux3 = (INICIO_SENHA_A + ((TAM_SENHA - 1) * (aux - 1)));
 
           if(cont - aux3 > TAM_SENHA - 2){
@@ -800,8 +799,9 @@ void EstadoInicial(void){
 
 void AbrirPortaBotao(void){
   botState = digitalRead(botao);
+  EEPROM.get(ENDERECO_MEM, flagMem);
   
-  if(botState){
+  if(botState && flagMem >= 2){
     digitalWrite(relePin, HIGH);
     lcd.clear();
     lcd.setCursor(5,0);
